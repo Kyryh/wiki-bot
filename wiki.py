@@ -32,3 +32,17 @@ class Wiki:
             }
         )
         return unescape_html(self.CONTENT_REGEX.search(content.text).group(1))
+
+    def parse_content(self, content: str) -> str:
+        
+        def template(match: re.Match[str]):
+            params = match.group(1).split("|")
+            print(params)
+            if len(params) > 2:
+                return ""
+            return params[-1]
+
+        content = re.sub(r"{{(.*?)}}\s", template, content, flags=re.S)
+
+
+        return content
