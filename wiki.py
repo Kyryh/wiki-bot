@@ -4,8 +4,9 @@ from html import unescape as unescape_html
 
 class Wiki:
 
-    SEARCH_REGEX = re.compile('<div class="mw-search-result-heading"><a href="(.*?)" title="(.*?)".*?<\/div>')
+    SEARCH_REGEX = re.compile('(<div class="mw-search-result-heading">|<h3 class="unified-search__result__header">)\s*<a href="(.*?)".*?title="(.*?)"', re.S)
     CONTENT_REGEX = re.compile("<textarea.*?>(.*?)<\/textarea>", re.S)
+    URL_PATH_REGEX = re.compile('(.*\..*?)?(\/.*)')
 
     def __init__(self, base_url: str):
         self.base_url = re.split("(?<!\W)/(?!\W)", base_url)[0]
@@ -21,7 +22,7 @@ class Wiki:
             }
         )
         search_results = self.SEARCH_REGEX.findall(search_response.text)
-        return {result[1]: result[0] for result in search_results}
+        return {result[2]: self.URL_PATH_REGEX.search(result[1]).group(2) for result in search_results}
 
     async def get_page_content(self, path: str) -> str:
         content = await self.client.get(
