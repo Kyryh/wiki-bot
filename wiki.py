@@ -7,41 +7,50 @@ class Wiki:
     CONTENT_REGEX = re.compile("<textarea.*?>(.*?)<\/textarea>", re.S)
     URL_PATH_REGEX = re.compile('(.*\..*?)?(\/.*)')
 
-    def __init__(self, base_url: str):
-        self.base_url = re.split("(?<!\W)/(?!\W)", base_url)[0]
+    def __init__(self, url: str):
+        self.url = re.split("(?<!\W)/(?!\W)", url)[0] + "/api.php"
         self.client = AsyncClient()
     
     async def search(self, query: str) -> dict[str, str]:
         search_response = await self.client.get(
-            self.base_url + "/wiki/Special:Search",
+            self.url,
             params = {
-                "search": query,
-                "ns0": 1,
-                "fulltext": 1
+                "action": "query",
+                "list": "search",
+                "format": "json",
+                "srsearch": query
             }
         )
-        search_results = self.SEARCH_REGEX.findall(search_response.text)
-        return {result[2]: self.URL_PATH_REGEX.search(result[1]).group(2) for result in search_results}
+        return {result["title"]: result["pageid"] for result in search_response.json()["query"]["search"]}
 
-    async def get_page_content(self, path: str) -> str:
-        content = await self.client.get(
-            self.base_url + path,
+    async def get_page_content(self, page: str | int) -> str:
+        if isinstance(page, str):
             params = {
-                "action": "edit"
+                "page": page
+            }
+        elif isinstance(page, int):
+            params = {
+                "pageid": page
+            }
+        else:
+            raise ValueError("Invalid argument type for 'page'")
+            
+        content = await self.client.get(
+            self.url,
+            params = params | {
+                "action": "parse",
+                "redirects": True,
+                "format": "json",
+                "prop": "text"
+                #"prop": "text|wikitext"
             }
         )
-        return self.CONTENT_REGEX.search(content.text).group(1)
+
+        return content.json()["parse"]["text"]["*"]
 
     def parse_content(self, content: str) -> str:
         
-        def template(match: re.Match[str]):
-            params = match.group(1).split("|")
-            print(params)
-            if len(params) > 2:
-                return ""
-            return params[-1]
-
-        content = re.sub(r"{{(.*?)}}\s", template, content, flags=re.S)
+        
 
 
         return content
