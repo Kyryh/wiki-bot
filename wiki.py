@@ -1,6 +1,5 @@
 from httpx import AsyncClient
 import re
-from html import unescape as unescape_html
 
 class Wiki:
 
@@ -31,7 +30,7 @@ class Wiki:
                 "action": "edit"
             }
         )
-        return unescape_html(self.CONTENT_REGEX.search(content.text).group(1))
+        return self.CONTENT_REGEX.search(content.text).group(1)
 
     def parse_content(self, content: str) -> str:
         
