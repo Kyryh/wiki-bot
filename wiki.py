@@ -1,19 +1,18 @@
 from httpx import AsyncClient
 import re
+from bs4 import BeautifulSoup
 
 class Wiki:
 
-    SEARCH_REGEX = re.compile('(<div class="mw-search-result-heading">|<h3 class="unified-search__result__header">)\s*<a href="(.*?)".*?title="(.*?)"', re.S)
-    CONTENT_REGEX = re.compile("<textarea.*?>(.*?)<\/textarea>", re.S)
     URL_PATH_REGEX = re.compile('(.*\..*?)?(\/.*)')
 
     def __init__(self, url: str):
-        self.url = re.split("(?<!\W)/(?!\W)", url)[0] + "/api.php"
+        self.url = re.split("(?<!\W)/(?!\W)", url)[0]
         self.client = AsyncClient()
     
     async def search(self, query: str) -> dict[str, str]:
         search_response = await self.client.get(
-            self.url,
+            self.url + "/api.php",
             params = {
                 "action": "query",
                 "list": "search",
@@ -23,7 +22,7 @@ class Wiki:
         )
         return {result["title"]: result["pageid"] for result in search_response.json()["query"]["search"]}
 
-    async def get_page_content(self, page: str | int) -> str:
+    async def get_page_content(self, page: str | int) -> dict[str, str]:
         if isinstance(page, str):
             params = {
                 "page": page
@@ -36,21 +35,58 @@ class Wiki:
             raise ValueError("Invalid argument type for 'page'")
             
         content = await self.client.get(
-            self.url,
+            self.url + "/api.php",
             params = params | {
                 "action": "parse",
                 "redirects": True,
                 "format": "json",
-                "prop": "text"
+                "prop": "text|langlinks|categories|links|templates|images|externallinks|sections|revid|displaytitle|iwlinks|properties|parsewarnings"
                 #"prop": "text|wikitext"
             }
         )
 
-        return content.json()["parse"]["text"]["*"]
+        json = content.json()
 
-    def parse_content(self, content: str) -> str:
+        title = json["parse"]["title"]
+
+        raw_content = json["parse"]["text"]["*"]
+
+        parsed_content = self._parse_content(title, raw_content)
+
+
+        return {
+            "title": title,
+            "raw_content": raw_content,
+            "parsed_content": parsed_content
+        }
+
+    def _parse_content(self, title: str, raw_content: str) -> str:
         
+        soup = BeautifulSoup(raw_content, "html.parser")
         
+        soup.decode_contents
+
+        content = [{"heading": title, "data": ""}]
+
+        for element in soup.div.find_all(re.compile("^(p|h\d?)$"), recursive=False):
+            if element.name.startswith("h"):
+                if element.text:
+                    content.append({"heading": element.span.decode_contents(), "data": ""})
+            else:
+                if element.text and not element.text.isspace():
+                    content[-1]["data"] += element.decode_contents()
+
+        return "\n\n".join(
+            self._parse_section(section['heading'], section['data']) for section in content if section["data"] != ""
+        )
+    
+    def _parse_section(self, heading: str, data: str) -> str:
+        data = re.sub(r"<img\s.*?\/>", "", data)
+        data = re.sub(r"<\/?(span|br).*?>", "", data)
+        data = data.replace("href=\"", "href=\"" + self.url)
+        data = data.replace("\xa0", "")
+        return f"<b>{heading}</b>\n{data}"
 
 
-        return content
+
+
