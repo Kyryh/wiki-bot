@@ -84,7 +84,7 @@ class Wiki:
     def _parse_section(self, heading: str, data: str) -> str:
         data = re.sub(r"<img\s.*?\/>", "", data)
         data = re.sub(r"<\/?(span|br).*?>", "", data)
-        data = re.sub(r"<a href=\"(.*?)\".*?>", fr'<a href="{self.url}\1">', data)
+        data = re.sub(r"<a href=\"(\/.*?)\".*?>", fr'<a href="{self.url}\1">', data)
         data = data.replace("\xa0", "")
         return f"<b>{heading}</b>\n{data}"
     
