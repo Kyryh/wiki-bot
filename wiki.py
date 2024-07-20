@@ -2,6 +2,7 @@ from collections import defaultdict
 from httpx import AsyncClient
 import re
 from bs4 import BeautifulSoup
+import textwrap
 
 class Wiki:
 
@@ -125,4 +126,12 @@ class Wiki:
         for i in range(len(new_texts)):
             new_texts[i], text_prefix = Wiki.fix_tags_single(text_prefix+new_texts[i])
         return new_texts
+    
+    @staticmethod
+    def textwrap(text: str, limit: int):
+        text = text.replace("a href", "a-href")
+        texts = textwrap.wrap(text, limit, fix_sentence_endings = False, replace_whitespace = False)
+        texts = [text.replace("a-href", "a href") for text in texts]
+        return Wiki.fix_tags_multiple(texts)
+
 
