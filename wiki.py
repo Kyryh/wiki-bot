@@ -85,6 +85,8 @@ class Wiki:
         data = re.sub(r"<img\s.*?\/>", "", data)
         data = re.sub(r"<\/?(span|br).*?>", "", data)
         data = re.sub(r"<a href=\"(\/.*?)\".*?>", fr'<a href="{self.url}\1">', data)
+        data = re.sub(r"<audio.*?>.*?<\/audio>", "", data)
+        data = re.sub(r"<sup.*?>.*?<\/sup>", "", data)
         data = data.replace("\xa0", "")
         return f"<b>{heading}</b>\n{data}"
     
