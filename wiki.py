@@ -82,10 +82,16 @@ class Wiki:
         )
     
     def _parse_section(self, heading: str, data: str) -> str:
+        def href_fix(m: re.Match[str]):
+            url = m.group(1)
+            if url.startswith("/"):
+                url = self.url + url
+            return f'<a href="{url}">'
+        
         data = re.sub(r"<img.*?\/>", "", data)
         data = re.sub(r"<\/?(span|br).*?>", "", data)
-        data = re.sub(r"<a href=\"(\/.*?)\".*?>", fr'<a href="{self.url}\1">', data)
         heading = re.sub(r"<\/?span.*?>", "", heading)
+        data = re.sub(r"<a .*?href=\"(.*?)\".*?>", href_fix, data)
         data = re.sub(r"<audio.*?>.*?<\/audio>", "", data)
         data = re.sub(r"<sup.*?>.*?<\/sup>", "", data)
         data = data.replace("\xa0", "")
